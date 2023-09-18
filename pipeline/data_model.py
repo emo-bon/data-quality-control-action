@@ -72,6 +72,8 @@ def generate_schema(habitat, sheet, config):
             data_type = XSDAnyURI(base_uri=base_uri)
         else:
             data_type = dtype_lookup[dty]
+        if habitat == "w" and sheet == "measured" and lct == "ph":
+            req = "optional"
         if (habitat in lty) and (sheet in lta):
             schema.add_column(
                 label=lct,
