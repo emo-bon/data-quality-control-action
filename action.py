@@ -75,8 +75,11 @@ def create_issue():
     repo.create_issue(
         title=f"Data Quality Control {date.today()}",
         body=(
-            f"A new report is available [here](https://github.com/{REPO}/blob/m"
-            "ain/data-quality-control/report.csv).\n\n"
+            f"A new [logfile](https://github.com/{REPO}/blob/main/data-quality-"
+            f"control/logfile) and [report](https://github.com/{REPO}/blob/main"
+            "/data-quality-control/report.csv) are available. Have a look at th"
+            "e logfile first to see if any problems were encountered during the"
+            " data quality control.\n\n"
             f"Data were controlled up to {THRESHOLD}, this date can be changed "
             "by modifying the `data_quality_control_threshold_date` in the [wor"
             f"kflow properties](https://github.com/{REPO}/blob/main/config/work"
