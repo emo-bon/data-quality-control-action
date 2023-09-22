@@ -41,6 +41,7 @@ def read_emobon_csv(path):
         pd.read_csv(path, dtype=object, keep_default_na=False, na_values=[""])
         .astype(str)
         .applymap(lambda x: x.strip())
+        .replace("ΝΑ", "NA")  # prevent unicode confusion by replacing greek NA with latin NA
         .replace("", "nan")
         .replace("nan", np.nan)
         .dropna(how="all")
