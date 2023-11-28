@@ -185,7 +185,7 @@ class CommonRuleArray:
                     if not data_model.isna(edmo):
                         # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                         try:
-                            repair = [f"{prefix}{int(i.strip())}" for i in edmo.split(";")]  # int conversion to assert the input is a list of integers
+                            repair = ";".join([f"{prefix}{int(i.strip())}" for i in edmo.split(";")])  # int conversion to assert the input is a list of integers
                             violations.append(
                                 Violation(
                                     diagnosis="organization edmoid error",
