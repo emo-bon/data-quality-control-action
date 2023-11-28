@@ -175,6 +175,43 @@ class CommonRuleArray:
         self.sampl_person_orcid = orcid("sampl_person_orcid", "sampl_person", aliases=self.aliases_sampling)
         self.store_person_orcid = orcid("store_person_orcid", "store_person", aliases=self.aliases_sampling)
 
+        def organization_edmoid(data_model: DataModel) -> List[Violation]:
+            prefix = "https://edmo.seadatanet.org/report/"
+            violations = []
+            for alias in self.aliases_observatory:
+                df = data_model[alias]
+                for index, row in df.iterrows():
+                    edmo = row["organization_edmoid"]
+                    if not data_model.isna(edmo):
+                        # TODO handle the case where the input is already repaired (i.e. a list of URIs)
+                        try:
+                            repair = [f"{prefix}{int(i.strip())}" for i in edmo.split(";")]  # int conversion to assert the input is a list of integers
+                            violations.append(
+                                Violation(
+                                    diagnosis="organization edmoid error",
+                                    table=alias,
+                                    column="organization_edmoid",
+                                    row=index + 1,
+                                    value=edmo,
+                                    extended_diagnosis="organization edmoid should be a list of URIs",
+                                    repair=repair,
+                                )
+                            )
+                        except ValueError:
+                            violations.append(
+                                Violation(
+                                    diagnosis="organization edmoid error",
+                                    table=alias,
+                                    column="organization_edmoid",
+                                    row=index + 1,
+                                    value=edmo,
+                                    extended_diagnosis="organization edmoid should be a list of URIs",
+                                )
+                            )
+            return violations
+    
+        self.organization_edmoid
+
 
 class SedimentRuleArray:
     """
