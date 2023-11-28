@@ -210,7 +210,7 @@ class CommonRuleArray:
                             )
             return violations
     
-        self.organization_edmoid
+        self.organization_edmoid = organization_edmoid
 
 
 class SedimentRuleArray:
