@@ -105,16 +105,16 @@ if __name__ == "__main__":
         "ws": "water_sampling",
     }
 
-    if (not pd.isna(wp["sediment"])) and (not pd.isna(wp["water"])):
+    if (not wp["sediment"] == "nan") and (not wp["water"] == "nan"):
         habitat = "all"
         alias2basename = {**alias2basename_sediment, **alias2basename_water}
         filter_logsheets("sediment")
         filter_logsheets("water")
-    elif not pd.isna(wp["sediment"]):
+    elif not wp["sediment"] == "nan":
         habitat = "sediment"
         alias2basename = alias2basename_sediment
         filter_logsheets("sediment")
-    elif not pd.isna(wp["water"]):
+    elif not wp["water"] == "nan":
         habitat = "water"
         alias2basename = alias2basename_water
         filter_logsheets("water")
