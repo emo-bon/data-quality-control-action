@@ -81,9 +81,9 @@ def create_issue():
             "e logfile first to see if any problems were encountered during the"
             " data quality control.\n\n"
             f"Data were controlled up to {THRESHOLD}, this date can be changed "
-            "by modifying the `data_quality_control_threshold_date` in the [wor"
-            f"kflow properties](https://github.com/{REPO}/blob/main/config/work"
-            "flow_properties.yml) (date format is YYYY-MM-DD)."
+            "by modifying the `data_quality_control_threshold_date` in [governa"
+            "nce-data/logsheets.csv](https://github.com/emo-bon/governance-data"
+            "/blob/main/logsheets.csv) (date format is YYYY-MM-DD)."
         ),
         assignee=f"{ASSIGNEE}"
     )
