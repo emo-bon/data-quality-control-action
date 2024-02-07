@@ -16,7 +16,7 @@ GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE", "/github/workspace"))
 PAT = os.getenv("PAT")
 REPO = os.getenv("REPO")
 ASSIGNEE = os.getenv("ASSIGNEE")
-LOGSHEETS_PATH = GITHUB_WORKSPACE / "logsheets"
+LOGSHEETS_PATH = GITHUB_WORKSPACE / "logsheets/raw"
 LOGSHEETS_FILTERED_PATH = GITHUB_WORKSPACE / "logsheets/filtered"
 LOGSHEETS_FILTERED_PATH.mkdir(parents=True, exist_ok=True)
 LOGSHEETS_TRANSFORMED_PATH = GITHUB_WORKSPACE / "logsheets/transformed"
