@@ -1,5 +1,5 @@
-name: "<action>"
-description: "<description>"
+name: "data-quality-control-action"
+description: "data-quality-control-action"
 runs:
   using: "docker"
   image: "Dockerfile"

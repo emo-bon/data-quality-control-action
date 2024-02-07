@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import logging
 import numpy as np
 import os
@@ -16,15 +17,15 @@ PAT = os.getenv("PAT")
 REPO = os.getenv("REPO")
 ASSIGNEE = os.getenv("ASSIGNEE")
 LOGSHEETS_PATH = GITHUB_WORKSPACE / "logsheets"
-LOGSHEETS_FILTERED_PATH = GITHUB_WORKSPACE / "logsheets-filtered"
+LOGSHEETS_FILTERED_PATH = GITHUB_WORKSPACE / "logsheets/filtered"
 LOGSHEETS_FILTERED_PATH.mkdir(parents=True, exist_ok=True)
-LOGSHEETS_TRANSFORMED_PATH = GITHUB_WORKSPACE / "logsheets-transformed"
+LOGSHEETS_TRANSFORMED_PATH = GITHUB_WORKSPACE / "logsheets/transformed"
 LOGSHEETS_TRANSFORMED_PATH.mkdir(parents=True, exist_ok=True)
 DQC_PATH = GITHUB_WORKSPACE / "data-quality-control"
 DQC_PATH.mkdir(parents=True, exist_ok=True)
 
 
-def filter_logsheets(habitat):
+def filter_logsheets(habitat):  # i.e. discarding samples and measurements taken after the data_quality_control_threshold_date
     df_sampling = pd.read_csv(LOGSHEETS_PATH / f"{habitat}_sampling.csv", dtype=object, keep_default_na=False)
     df_sampling.loc[pd.to_datetime(df_sampling["collection_date"]) >= THRESHOLD] = ""
     df_sampling.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_sampling.csv", index=False)
@@ -105,16 +106,16 @@ if __name__ == "__main__":
         "ws": "water_sampling",
     }
 
-    if (not wp["sediment"] == "nan") and (not wp["water"] == "nan"):
+    if (wp["sediment"] != "nan") and (wp["water"] != "nan"):
         habitat = "all"
         alias2basename = {**alias2basename_sediment, **alias2basename_water}
         filter_logsheets("sediment")
         filter_logsheets("water")
-    elif not wp["sediment"] == "nan":
+    elif wp["sediment"] != "nan":
         habitat = "sediment"
         alias2basename = alias2basename_sediment
         filter_logsheets("sediment")
-    elif not wp["water"] == "nan":
+    elif wp["water"] != "nan":
         habitat = "water"
         alias2basename = alias2basename_water
         filter_logsheets("water")
