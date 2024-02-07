@@ -17,10 +17,10 @@ class CommonRuleArray:
     """
     rules in common to all habitats
     """
-    def __init__(self, aliases_measured, aliases_observatory, aliases_sampling):
-        self.aliases_measured = aliases_measured
-        self.aliases_observatory = aliases_observatory
-        self.aliases_sampling = aliases_sampling
+    def __init__(self, habitat):
+        self.aliases_measured = ["sm"] if habitat == "sediment" else ["wm"] if habitat == "water" else ["sm", "wm"]
+        self.aliases_observatory = ["so"] if habitat == "sediment" else ["wo"] if habitat == "water" else ["so", "wo"]
+        self.aliases_sampling = ["ss"] if habitat == "sediment" else ["ws"] if habitat == "water" else ["ss", "ws"]
 
         # rule factory
         self.biomass = rf.regex("biomass", r"^(.+\s+\d+\.?\d*E?[-|+]?\d*;?\s*)+$", self.aliases_measured)
@@ -217,10 +217,10 @@ class SedimentRuleArray:
     """
     rules exclusive to sediment
     """
-    def __init__(self, aliases_measured, aliases_observatory, aliases_sampling):
-        self.aliases_measured = aliases_measured
-        self.aliases_observatory = aliases_observatory
-        self.aliases_sampling = aliases_sampling
+    def __init__(self):
+        self.aliases_measured = ["sm"]
+        self.aliases_observatory = ["so"]
+        self.aliases_sampling = ["ss"]
         self.comm_samp = rf.membership("comm_samp", ["micro", "meio", "macro", "blank"], self.aliases_sampling)
 
 
@@ -228,48 +228,22 @@ class WaterRuleArray:
     """
     rules exclusive to water
     """
-    def __init__(self, aliases_measured, aliases_observatory, aliases_sampling):
-        self.aliases_measured = aliases_measured
-        self.aliases_observatory = aliases_observatory
-        self.aliases_sampling = aliases_sampling
+    def __init__(self):
+        self.aliases_measured = ["wm"]
+        self.aliases_observatory = ["wo"]
+        self.aliases_sampling = ["ws"]
         ...
 
 
 def generate_rules(habitat):
-    # TODO clean up this boilerplate 
     assert habitat in ("all", "sediment", "water")
-
-    all_measured = ["sm", "wm"]
-    all_observatory = ["so", "wo"]
-    all_sampling = ["ss", "ws"]
-    sediment_measured = ["sm"]
-    sediment_observatory = ["so"]
-    sediment_sampling = ["ss"]
-    water_measured = ["wm"]
-    water_observatory = ["wo"]
-    water_sampling = ["ws"]
-
+    
     if habitat == "sediment":
-        all_measured = sediment_measured
-        all_observatory = sediment_observatory
-        all_sampling = sediment_sampling
-
+        rule_arrays = [CommonRuleArray(habitat), SedimentRuleArray()]
     if habitat == "water":
-        all_measured = water_measured
-        all_observatory = water_observatory
-        all_sampling = water_sampling
-
-    rule_arrays = [CommonRuleArray(all_measured, all_observatory, all_sampling)]
-    sediment_rule_array = SedimentRuleArray(sediment_measured, sediment_observatory, sediment_sampling)
-    water_rule_array = WaterRuleArray(water_measured, water_observatory, water_sampling)
-
-    if habitat == "sediment":
-        rule_arrays.append(sediment_rule_array)
-    if habitat == "water":
-        rule_arrays.append(water_rule_array)
+        rule_arrays = [CommonRuleArray(habitat), WaterRuleArray()]
     if habitat == "all":
-        rule_arrays.append(sediment_rule_array)
-        rule_arrays.append(water_rule_array)
+        rule_arrays = [CommonRuleArray(habitat), SedimentRuleArray(), WaterRuleArray()]
 
     rules = []
     for array in rule_arrays:
