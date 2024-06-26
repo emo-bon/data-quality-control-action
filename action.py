@@ -25,17 +25,31 @@ DQC_PATH = GITHUB_WORKSPACE / "data-quality-control"
 DQC_PATH.mkdir(parents=True, exist_ok=True)
 
 
-def filter_logsheets(habitat):  # i.e. discarding samples and measurements taken after the data_quality_control_threshold_date
-    df_sampling = pd.read_csv(LOGSHEETS_PATH / f"{habitat}_sampling.csv", dtype=object, keep_default_na=False)
+def filter_logsheets(
+    habitat,
+):  # i.e. discarding samples and measurements taken after the data_quality_control_threshold_date
+    df_sampling = pd.read_csv(
+        LOGSHEETS_PATH / f"{habitat}_sampling.csv", dtype=object, keep_default_na=False
+    )
     df_sampling.loc[pd.to_datetime(df_sampling["collection_date"]) >= THRESHOLD] = ""
     df_sampling.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_sampling.csv", index=False)
 
-    df_measured = pd.read_csv(LOGSHEETS_PATH / f"{habitat}_measured.csv", dtype=object, keep_default_na=False)
-    df_measured.loc[~df_measured["source_mat_id"].isin(df_sampling["source_mat_id"])] = ""
+    df_measured = pd.read_csv(
+        LOGSHEETS_PATH / f"{habitat}_measured.csv", dtype=object, keep_default_na=False
+    )
+    df_measured.loc[
+        ~df_measured["source_mat_id"].isin(df_sampling["source_mat_id"])
+    ] = ""
     df_measured.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_measured.csv", index=False)
 
-    df_observatory = pd.read_csv(LOGSHEETS_PATH / f"{habitat}_observatory.csv", dtype=object, keep_default_na=False)
-    df_observatory.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_observatory.csv", index=False)
+    df_observatory = pd.read_csv(
+        LOGSHEETS_PATH / f"{habitat}_observatory.csv",
+        dtype=object,
+        keep_default_na=False,
+    )
+    df_observatory.to_csv(
+        LOGSHEETS_FILTERED_PATH / f"{habitat}_observatory.csv", index=False
+    )
 
 
 def create_report(input_path, output_path):
@@ -43,8 +57,9 @@ def create_report(input_path, output_path):
     df_report = pd.DataFrame()
     df_report["Diagnosis"] = df["diagnosis"]
     df_report["LogsheetType"] = np.select(
-        [df["table"].str[0] == "s", df["table"].str[0] == "w"],
+        [str(df["table"].str[0]) == "s", str(df["table"].str[0]) == "w"],
         ["sediment", "water"],
+        default="unknown",
     )
     df_report["LogsheetTab"] = np.select(
         [
@@ -59,7 +74,9 @@ def create_report(input_path, output_path):
     df_report["Value"] = np.where(df["value"].isna(), "<empty>", df["value"])
     df_report["Repair"] = df["repair"]
     df_report["ExtendedDiagnosis"] = df["extended_diagnosis"]
-    df_report["ExtendedDiagnosis"] = np.where(df["extended_diagnosis"].isna(), "\\", df["extended_diagnosis"])
+    df_report["ExtendedDiagnosis"] = np.where(
+        df["extended_diagnosis"].isna(), "\\", df["extended_diagnosis"]
+    )
     df_report["FilePath"] = df["file_path"]
     df_report["DataType"] = df["data_type"]
     df_report["Requirement"] = np.select(
@@ -86,13 +103,16 @@ def create_issue():
             "nce-data/logsheets.csv](https://github.com/emo-bon/governance-data"
             "/blob/main/logsheets.csv) (date format is YYYY-MM-DD)."
         ),
-        assignee=f"{ASSIGNEE}"
+        assignee=f"{ASSIGNEE}",
     )
 
 
 if __name__ == "__main__":
     logging.basicConfig(filename=DQC_PATH / "logfile", filemode="w", level=logging.INFO)
-    wp = yaml.load(open(GITHUB_WORKSPACE / "config/workflow_properties.yml"), Loader=yaml.BaseLoader)
+    wp = yaml.load(
+        open(GITHUB_WORKSPACE / "config/workflow_properties.yml"),
+        Loader=yaml.BaseLoader,
+    )
     THRESHOLD = wp["data_quality_control_threshold_date"]
 
     alias2basename_sediment = {
@@ -129,7 +149,7 @@ if __name__ == "__main__":
     )
 
     rules = generate_rules(habitat=habitat)
-        
+
     RuleEngine(
         data_model=data_model,
         rules=rules,
@@ -150,4 +170,3 @@ if __name__ == "__main__":
         dqc_path=DQC_PATH / "dqc.csv",
         alias2basename=alias2basename,
     ).run()
-    
