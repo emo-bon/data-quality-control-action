@@ -57,9 +57,8 @@ def create_report(input_path, output_path):
     df_report = pd.DataFrame()
     df_report["Diagnosis"] = df["diagnosis"]
     df_report["LogsheetType"] = np.select(
-        [str(df["table"].str[0]) == "s", str(df["table"].str[0]) == "w"],
+        [df["table"].str[0] == "s", df["table"].str[0] == "w"],
         ["sediment", "water"],
-        default="unknown",
     )
     df_report["LogsheetTab"] = np.select(
         [
