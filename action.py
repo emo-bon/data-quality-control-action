@@ -59,6 +59,7 @@ def create_report(input_path, output_path):
     df_report["LogsheetType"] = np.select(
         [df["table"].str[0] == "s", df["table"].str[0] == "w"],
         ["sediment", "water"],
+        default="NULL"
     )
     df_report["LogsheetTab"] = np.select(
         [
@@ -67,6 +68,7 @@ def create_report(input_path, output_path):
             df["table"].str[1] == "s",
         ],
         ["measured", "observatory", "sampling"],
+        default="NULL"
     )
     df_report["Column"] = df["column"]
     df_report["Row"] = df["row"]
@@ -81,6 +83,7 @@ def create_report(input_path, output_path):
     df_report["Requirement"] = np.select(
         [df["nullable"] == True, df["nullable"] == False],
         ["optional", "mandatory"],
+        default="NULL"
     )
     df_report = df_report[df_report["Repair"].isna()]
     df_report = df_report.drop(columns=["Repair"])
