@@ -60,6 +60,18 @@ class CommonRuleArray:
             for alias in self.aliases_sampling:
                 df = data_model[alias]
                 for index, row in df.iterrows():
+                    def add_violation(message: str) -> None:
+                        violations.append(
+                            Violation(
+                                diagnosis="source_mat_id error",
+                                table=alias,
+                                column="source_mat_id",
+                                row=index + 1,
+                                value=row["source_mat_id"],
+                                extended_diagnosis=message,
+                            )
+                        )
+                        
                     if not data_model.isna(row["source_mat_id"]):
                         collection_date = row["collection_date"][2:10].replace("-", "")
                         if alias.startswith("s"):
@@ -73,16 +85,9 @@ class CommonRuleArray:
                                 size_frac_up = row["size_frac_up"]
                             pattern = f'^EMOBON_{wa_id}_{collection_date}_{size_frac_up}um_{row["replicate"]}$'
                         if not re.match(pattern, row["source_mat_id"]):
-                            violations.append(
-                                Violation(
-                                    diagnosis="source_mat_id error",
-                                    table=alias,
-                                    column="source_mat_id",
-                                    row=index + 1,
-                                    value=row["source_mat_id"],
-                                    extended_diagnosis=f"source_mat_id should match {pattern}",
-                                )
-                            )
+                            add_violation(f"source_mat_id should match {pattern}")
+                    else:   # source_mat_id is missing
+                        add_violation("source_mat_id is missing")  
 
             return violations
         
