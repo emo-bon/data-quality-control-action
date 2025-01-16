@@ -1,5 +1,9 @@
 # data-quality-control-action
 
+## Usage
+
+Include the action in the workglow by adding these lines to some `./.github/worfklow.my-wf.yml`
+
 ```
 on: [push]
 jobs:
@@ -21,3 +25,9 @@ with:
 * `PAT`: a personal access token or automatic authentication token
 * `REPO`: repo in which to create an issue for end user notification
 * `ASSIGNEE`: github username of end user to notify
+
+
+# TODO
+- describe where this action gets its data
+- describe dependency on https://github.com/vliz-be-opsci/py-data-rules
+- describe contents and purpose of this package 
