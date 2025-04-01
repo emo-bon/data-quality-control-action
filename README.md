@@ -2,7 +2,7 @@
 
 ## Usage
 
-Include the action in the workglow by adding these lines to some `./.github/worfklow.my-wf.yml`
+Include the action in the workflow by adding these lines to some `./.github/worfklow/my-wf.yml`
 
 ```
 on: [push]
