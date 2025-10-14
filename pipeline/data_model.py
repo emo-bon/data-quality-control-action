@@ -7,6 +7,7 @@ from py_data_rules.data_type import (
     XSDDate,
     XSDDateTime,
     XSDFloat,
+    XSDDouble,
     XSDInteger,
     XSDString,
     XSDAnyURI,
@@ -53,6 +54,7 @@ def generate_schema(habitat, sheet, config):
     dtype_lookup = {
         "xsd:string": XSDString(),
         "xsd:float": XSDFloat(),
+        "xsd:double": XSDDouble(),
         "xsd:integer": XSDInteger(),
         "xsd:datetime": XSDDateTime(["%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M%z"]),
         "xsd:date": XSDDate(),
