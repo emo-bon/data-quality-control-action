@@ -1,2 +1,3 @@
 #!/bin/bash
-python -m /opt/action
+cd /opt
+python -m action
