@@ -1,6 +1,0 @@
-beautifulsoup4
-pandas
-pygithub
-pyyaml
-uritemplate
-git+https://github.com/vliz-be-opsci/py-data-rules.git@main

@@ -8,9 +8,9 @@ from datetime import date
 from github import Github
 from pathlib import Path
 from py_data_rules.rule_engine import RuleEngine
-from pipeline.data_model import generate_data_model
-from pipeline.pipeline import Pipeline
-from pipeline.rules import generate_rules
+from .data_model import generate_data_model
+from .pipeline import Pipeline
+from .rules import generate_rules
 
 GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE", "/github/workspace"))
 PAT = os.getenv("PAT")

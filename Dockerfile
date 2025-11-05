@@ -1,7 +1,7 @@
 FROM python:3.9
-COPY pipeline /pipeline
-COPY action.py /action.py
-COPY requirements.txt /requirements.txt
-RUN python -m pip install -r /requirements.txt
-RUN chmod +x /action.py
-ENTRYPOINT ["/action.py"]
+RUN pip install beautifulsoup4 pandas pygithub pyyaml uritemplate
+RUN pip install git+https://github.com/vliz-be-opsci/py-data-rules.git@main
+COPY action /opt/action
+COPY entrypoint.sh /opt/entrypoint.sh
+RUN chmod +x /opt/entrypoint.sh
+ENTRYPOINT ["/opt/entrypoint.sh"]
