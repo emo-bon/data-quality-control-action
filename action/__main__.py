@@ -1,9 +1,7 @@
-#!/usr/bin/env python
 import logging
 import numpy as np
 import os
 import pandas as pd
-import yaml
 from datetime import date
 from github import Github
 from pathlib import Path
@@ -12,17 +10,27 @@ from .data_model import generate_data_model
 from .pipeline import Pipeline
 from .rules import generate_rules
 
-GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE", "/github/workspace"))
-PAT = os.getenv("PAT")
-REPO = os.getenv("REPO")
-ASSIGNEE = os.getenv("ASSIGNEE")
+GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE"))
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_REPOSITORY = os.getenv("GITHUB_REPOSITORY")
+WATER_LOGSHEET_URL = os.getenv("WATER_LOGSHEET_URL")
+SEDIMENT_LOGSHEET_URL = os.getenv("SEDIMENT_LOGSHEET_URL")
+ARMS_LOGSHEET_URL = os.getenv("ARMS_LOGSHEET_URL")
+DATA_QUALITY_CONTROL_THRESHOLD_DATE = os.getenv("DATA_QUALITY_CONTROL_THRESHOLD_DATE")
+DATA_QUALITY_CONTROL_ASSIGNEE = os.getenv("DATA_QUALITY_CONTROL_ASSIGNEE")
+
 LOGSHEETS_PATH = GITHUB_WORKSPACE / "logsheets/raw"
+
 LOGSHEETS_FILTERED_PATH = GITHUB_WORKSPACE / "logsheets/filtered"
 LOGSHEETS_FILTERED_PATH.mkdir(parents=True, exist_ok=True)
+
 LOGSHEETS_TRANSFORMED_PATH = GITHUB_WORKSPACE / "logsheets/transformed"
 LOGSHEETS_TRANSFORMED_PATH.mkdir(parents=True, exist_ok=True)
+
 DQC_PATH = GITHUB_WORKSPACE / "data-quality-control"
 DQC_PATH.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(filename=DQC_PATH / "logfile", filemode="w", level=logging.INFO)
 
 
 def filter_logsheets(
@@ -91,32 +99,18 @@ def create_report(input_path, output_path):
 
 
 def create_issue():
-    repo = Github(PAT).get_repo(REPO)
+    repo = Github(GITHUB_TOKEN).get_repo(GITHUB_REPOSITORY)
     repo.create_issue(
         title=f"Data Quality Control {date.today()}",
         body=(
-            f"A new [logfile](https://github.com/{REPO}/blob/main/data-quality-"
-            f"control/logfile) and [report](https://github.com/{REPO}/blob/main"
-            "/data-quality-control/report.csv) are available. Have a look at th"
-            "e logfile first to see if any problems were encountered during the"
-            " data quality control.\n\n"
-            f"Data were controlled up to {THRESHOLD}, this date can be changed "
-            "by modifying the `data_quality_control_threshold_date` in [governa"
-            "nce-data/logsheets.csv](https://github.com/emo-bon/governance-data"
-            "/blob/main/logsheets.csv) (date format is YYYY-MM-DD)."
+            f"A new [logfile](https://github.com/{GITHUB_REPOSITORY}/blob/main/data-quality-control/logfile) and [report](https://github.com/{GITHUB_REPOSITORY}/blob/main/data-quality-control/report.csv) are available. "
+            f"Have a look at the logfile first to see if any problems were encountered during the data quality control.\n\n"
+            f"Data were controlled up to {DATA_QUALITY_CONTROL_THRESHOLD_DATE}, this date can be changed by modifying the `data_quality_control_threshold_date` in [governance-data/logsheets.csv](https://github.com/emo-bon/governance-data/blob/main/logsheets.csv) (date format is YYYY-MM-DD)."
         ),
-        assignee=f"{ASSIGNEE}",
+        assignee=DATA_QUALITY_CONTROL_ASSIGNEE,
     )
-
 
 if __name__ == "__main__":
-    logging.basicConfig(filename=DQC_PATH / "logfile", filemode="w", level=logging.INFO)
-    wp = yaml.load(
-        open(GITHUB_WORKSPACE / "config/workflow_properties.yml"),
-        Loader=yaml.BaseLoader,
-    )
-    THRESHOLD = wp["data_quality_control_threshold_date"]
-
     alias2basename_sediment = {
         "sm": "sediment_measured",
         "so": "sediment_observatory",
@@ -128,16 +122,16 @@ if __name__ == "__main__":
         "ws": "water_sampling",
     }
 
-    if (wp["sediment"] != "nan") and (wp["water"] != "nan"):
+    if (SEDIMENT_LOGSHEET_URL != "nan") and (WATER_LOGSHEET_URL != "nan"):
         habitat = "all"
         alias2basename = {**alias2basename_sediment, **alias2basename_water}
         filter_logsheets("sediment")
         filter_logsheets("water")
-    elif wp["sediment"] != "nan":
+    elif SEDIMENT_LOGSHEET_URL != "nan":
         habitat = "sediment"
         alias2basename = alias2basename_sediment
         filter_logsheets("sediment")
-    elif wp["water"] != "nan":
+    elif WATER_LOGSHEET_URL != "nan":
         habitat = "water"
         alias2basename = alias2basename_water
         filter_logsheets("water")

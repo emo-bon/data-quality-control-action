@@ -1,3 +1,2 @@
 #!/bin/bash
-cd /opt
-python -m action
+PYTHONPATH=/opt python -m action
