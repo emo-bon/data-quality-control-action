@@ -39,7 +39,7 @@ def filter_logsheets(
     df_sampling = pd.read_csv(
         LOGSHEETS_PATH / f"{habitat}_sampling.csv", dtype=object, keep_default_na=False
     )
-    df_sampling.loc[pd.to_datetime(df_sampling["collection_date"]) >= THRESHOLD] = ""
+    df_sampling.loc[pd.to_datetime(df_sampling["collection_date"]) >= DATA_QUALITY_CONTROL_THRESHOLD_DATE] = ""
     df_sampling.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_sampling.csv", index=False)
 
     df_measured = pd.read_csv(
@@ -122,21 +122,21 @@ if __name__ == "__main__":
         "ws": "water_sampling",
     }
 
-    if (SEDIMENT_LOGSHEET_URL != "nan") and (WATER_LOGSHEET_URL != "nan"):
+    if SEDIMENT_LOGSHEET_URL and WATER_LOGSHEET_URL:
         habitat = "all"
         alias2basename = {**alias2basename_sediment, **alias2basename_water}
         filter_logsheets("sediment")
         filter_logsheets("water")
-    elif SEDIMENT_LOGSHEET_URL != "nan":
+    elif SEDIMENT_LOGSHEET_URL:
         habitat = "sediment"
         alias2basename = alias2basename_sediment
         filter_logsheets("sediment")
-    elif WATER_LOGSHEET_URL != "nan":
+    elif WATER_LOGSHEET_URL:
         habitat = "water"
         alias2basename = alias2basename_water
         filter_logsheets("water")
     else:
-        raise AssertionError("invalid workflow properties")
+        raise AssertionError("invalid logsheet_url configuration")
 
     # data quality control
     data_model = generate_data_model(
