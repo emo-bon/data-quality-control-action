@@ -229,7 +229,6 @@ class CommonRuleArray:
                             # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                             try:
                                 repair = ";".join([f"{prefix}{term.strip().split('[ENVO:')[1][:-1]}" for term in envo.split(";")])
-                                print(repair)
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
@@ -241,7 +240,7 @@ class CommonRuleArray:
                                         repair=repair,
                                     )
                                 )
-                            except ValueError:
+                            except (ValueError, IndexError):
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
