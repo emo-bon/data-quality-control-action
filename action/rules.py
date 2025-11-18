@@ -217,6 +217,48 @@ class CommonRuleArray:
     
         self.organization_edmoid = organization_edmoid
 
+        def envo(column, aliases):
+            def fn(data_model: DataModel) -> List[Violation]:
+                prefix = "http://purl.obolibrary.org/obo/ENVO_"
+                violations = []
+                for alias in aliases:
+                    df = data_model[alias]
+                    for index, row in df.iterrows():
+                        envo = row[column]
+                        if not data_model.isna(envo):
+                            # TODO handle the case where the input is already repaired (i.e. a list of URIs)
+                            try:
+                                repair = ";".join([f"{prefix}{term.strip().split('[ENVO:')[1][:-1]}" for term in envo.split(";")])
+                                print(repair)
+                                violations.append(
+                                    Violation(
+                                        diagnosis="envo term error",
+                                        table=alias,
+                                        column=column,
+                                        row=index + 1,
+                                        value=envo,
+                                        extended_diagnosis="envo term should be a list of URIs",
+                                        repair=repair,
+                                    )
+                                )
+                            except ValueError:
+                                violations.append(
+                                    Violation(
+                                        diagnosis="envo term error",
+                                        table=alias,
+                                        column=column,
+                                        row=index + 1,
+                                        value=envo,
+                                        extended_diagnosis="envo term should be a list of URIs",
+                                    )
+                                )
+                return violations
+            return fn
+    
+        self.env_broad_biome = envo("env_broad_biome", aliases=self.aliases_observatory)
+        self.env_local = envo("env_local", aliases=self.aliases_observatory)
+        self.env_material = envo("env_material", aliases=self.aliases_sampling)
+
 
 class SedimentRuleArray:
     """
