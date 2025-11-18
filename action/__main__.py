@@ -1,14 +1,24 @@
+import argparse
 import logging
 import numpy as np
 import os
 import pandas as pd
 from datetime import date
+from dotenv import load_dotenv
 from github import Github
 from pathlib import Path
 from py_data_rules.rule_engine import RuleEngine
+from py_data_rules.data_type import XSDDate
 from .data_model import generate_data_model
 from .pipeline import Pipeline
 from .rules import generate_rules
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--dev', action='store_true')
+args = parser.parse_args()
+
+if args.dev:
+    load_dotenv(override=True)
 
 GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE"))
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
@@ -29,6 +39,9 @@ LOGSHEETS_TRANSFORMED_PATH.mkdir(parents=True, exist_ok=True)
 
 DQC_PATH = GITHUB_WORKSPACE / "data-quality-control"
 DQC_PATH.mkdir(parents=True, exist_ok=True)
+
+msg = f"DATA_QUALITY_CONTROL_THRESHOLD_DATE `{DATA_QUALITY_CONTROL_THRESHOLD_DATE}` is not a valid date (expected format: YYYY-MM-DD)"
+assert XSDDate().match(DATA_QUALITY_CONTROL_THRESHOLD_DATE), msg
 
 logging.basicConfig(filename=DQC_PATH / "logfile", filemode="w", level=logging.INFO)
 
@@ -157,7 +170,8 @@ if __name__ == "__main__":
         output_path=DQC_PATH / "report.csv",
     )
 
-    create_issue()
+    if not args.dev:
+        create_issue()
 
     # data transformation
     Pipeline(

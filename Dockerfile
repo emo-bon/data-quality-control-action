@@ -1,7 +1,7 @@
 FROM python:3.9
-RUN pip install beautifulsoup4 pandas pygithub uritemplate
-RUN pip install git+https://github.com/vliz-be-opsci/py-data-rules.git@main
-COPY action /opt/action
 COPY entrypoint.sh /opt/entrypoint.sh
+COPY action /opt/action
+COPY requirements.txt /opt/requirements.txt
 RUN chmod +x /opt/entrypoint.sh
+RUN pip install -r /opt/requirements.txt
 ENTRYPOINT ["/opt/entrypoint.sh"]
