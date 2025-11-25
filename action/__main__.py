@@ -18,6 +18,7 @@ parser.add_argument('--dev', action='store_true')
 args = parser.parse_args()
 
 if args.dev:
+    assert Path(".env").exists(), ".env file is missing"
     load_dotenv(override=True)
 
 GITHUB_WORKSPACE = Path(os.getenv("GITHUB_WORKSPACE"))
