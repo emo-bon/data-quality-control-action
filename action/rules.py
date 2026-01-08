@@ -228,7 +228,13 @@ class CommonRuleArray:
                         if not data_model.isna(envo):
                             # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                             try:
-                                repair = ";".join([f"{prefix}{term.strip().split('[ENVO:')[1][:-1]}" for term in envo.split(";")])
+                                accession_numbers = [term.strip().split('[ENVO')[-1][1:-1] for term in envo.split(";")]
+                                for an in accession_numbers:
+                                    try:
+                                        int(an)
+                                    except:
+                                        raise AssertionError
+                                repair = ";".join([f"{prefix}{an}" for an in accession_numbers])
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
@@ -240,7 +246,7 @@ class CommonRuleArray:
                                         repair=repair,
                                     )
                                 )
-                            except (ValueError, IndexError):
+                            except (ValueError, IndexError, AssertionError):
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
