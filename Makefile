@@ -5,14 +5,14 @@ GITHUB_WORKSPACE = https://github.com/octocat/hello-world
 .DEFAULT_GOAL := run
 
 ifeq ($(OS),Windows_NT)
-    PYTHON := venv/Scripts/python.exe
+    PYTHON := .venv/Scripts/python.exe
 else
-    PYTHON := venv/bin/python
+    PYTHON := .venv/bin/python
 endif
 
 init:
-	rm -rf venv
-	python -m venv venv
+	rm -rf .venv
+	python -m venv .venv
 	$(PYTHON) -m pip install -r requirements.txt
 	rm -rf github-workspace
 	git clone $(GITHUB_WORKSPACE) github-workspace 
