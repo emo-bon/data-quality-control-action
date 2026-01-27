@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 from py_data_rules.data_model import DataModel
 from py_data_rules.data_type import (
@@ -38,16 +37,15 @@ class EMOBONList(DataType):
 
 
 def read_emobon_csv(path):
-    return (
+    df = (
         pd.read_csv(path, dtype=object, keep_default_na=False, na_values=[""])
         .astype(str)
-        .map(lambda x: x.strip())
-        .replace("ΝΑ", "NA")  # prevent unicode confusion by replacing greek NA with latin NA
-        .replace("", "nan")
-        .replace("nan", np.nan)
-        .dropna(how="all")
-        .replace(np.nan, "")
+        .map(lambda _: _.strip())
+        .map(lambda _: "" if _ == "nan" else _)
+        .map(lambda _: "" if (_ == "NA") or (_ =="ΝΑ") else _)  # prevent unicode confusion by replacing both greek and latin NA)
     )
+    df = df[~(df == "").all(axis=1)]  # drop empty rows
+    return df
 
 
 def generate_schema(habitat, sheet, config):
