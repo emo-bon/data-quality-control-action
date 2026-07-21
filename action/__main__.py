@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from datetime import date
 from dotenv import load_dotenv
-from github import Github, Auth
+from github import Github
 from pathlib import Path
 from py_data_rules.rule_engine import RuleEngine
 from py_data_rules.data_type import XSDDate
@@ -113,8 +113,7 @@ def create_report(input_path, output_path):
 
 
 def create_issue():
-    auth = Auth.Token(GITHUB_TOKEN)
-    repo = Github(auth=auth).get_repo(GITHUB_REPOSITORY) # repo = Github(GITHUB_TOKEN).get_repo(GITHUB_REPOSITORY)
+    repo = Github(GITHUB_TOKEN).get_repo(GITHUB_REPOSITORY)
     repo.create_issue(
         title=f"Data Quality Control {date.today()}",
         body=(
@@ -172,8 +171,8 @@ if __name__ == "__main__":
         output_path=DQC_PATH / "report.csv",
     )
 
-    if not args.dev:
-        create_issue()
+    # if not args.dev:
+    #     create_issue()
 
     # data transformation
     Pipeline(
