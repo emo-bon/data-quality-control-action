@@ -113,7 +113,8 @@ def create_report(input_path, output_path):
 
 
 def create_issue():
-    repo = Github(GITHUB_TOKEN).get_repo(GITHUB_REPOSITORY)
+    auth = Auth.Token(GITHUB_TOKEN)
+    repo = Github(auth=auth).get_repo(GITHUB_REPOSITORY) # repo = Github(GITHUB_TOKEN).get_repo(GITHUB_REPOSITORY)
     repo.create_issue(
         title=f"Data Quality Control {date.today()}",
         body=(
