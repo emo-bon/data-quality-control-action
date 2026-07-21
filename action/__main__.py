@@ -5,7 +5,7 @@ import os
 import pandas as pd
 from datetime import date
 from dotenv import load_dotenv
-from github import Github
+from github import Github, Auth
 from pathlib import Path
 from py_data_rules.rule_engine import RuleEngine
 from py_data_rules.data_type import XSDDate
