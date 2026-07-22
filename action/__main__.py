@@ -171,8 +171,8 @@ if __name__ == "__main__":
         output_path=DQC_PATH / "report.csv",
     )
 
-    # if not args.dev:
-    #     create_issue()
+    if not args.dev:
+        create_issue()
 
     # data transformation
     Pipeline(
