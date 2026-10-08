@@ -53,7 +53,7 @@ def filter_logsheets(
     df_sampling = pd.read_csv(
         LOGSHEETS_PATH / f"{habitat}_sampling.csv", dtype=object, keep_default_na=False
     )
-    df_sampling.loc[pd.to_datetime(df_sampling["collection_date"]) >= DATA_QUALITY_CONTROL_THRESHOLD_DATE] = ""
+    df_sampling.loc[pd.to_datetime(df_sampling["collection_date"], errors="coerce") >= DATA_QUALITY_CONTROL_THRESHOLD_DATE] = ""
     df_sampling.to_csv(LOGSHEETS_FILTERED_PATH / f"{habitat}_sampling.csv", index=False)
 
     df_measured = pd.read_csv(
