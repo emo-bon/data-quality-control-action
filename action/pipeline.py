@@ -35,4 +35,5 @@ class Pipeline:
         # write output
         for alias, df in self.dfs.items():
             base_name = self.alias2basename[alias]
+            df = df.replace("", "NA")  # empty cells in transformed logsheets become NA (#21)
             df.to_csv(self.output_path / f"{base_name}.csv", index=False)
