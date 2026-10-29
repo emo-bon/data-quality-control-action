@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import requests
 import uritemplate
@@ -11,6 +12,15 @@ from py_data_rules.rule import Rule
 from py_data_rules.violation import Violation
 
 logger = logging.getLogger(__name__)
+
+
+# HI ADDITION: convert a cell to float for numeric comparisons
+def safe_float(value):
+    try:
+        number = float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
 
 
 class CommonRuleArray:
