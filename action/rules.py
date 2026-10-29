@@ -23,6 +23,28 @@ def safe_float(value):
     return number if math.isfinite(number) else None
 
 
+# HI ADDITION: read a depth cell in one of the schema formats (float, float-float, <float, >float)
+def parse_depth(value):
+    text = str(value).replace(" ", "")
+    if text.startswith((">", "<")):
+        number = safe_float(text[1:])
+        if number is None:
+            return "invalid", None
+        return text[0], number
+    if "-" in text:
+        parts = text.split("-")
+        if len(parts) != 2:
+            return "invalid", None
+        low, high = safe_float(parts[0]), safe_float(parts[1])
+        if low is None or high is None:
+            return "invalid", None
+        return "range", max(low, high)
+    number = safe_float(text)
+    if number is None:
+        return "invalid", None
+    return "number", number
+
+
 class CommonRuleArray:
     """
     rules in common to all habitats
@@ -42,25 +64,44 @@ class CommonRuleArray:
         self.arr_date_seq_after_ship_date_seq = rf.x_after_y("arr_date_seq", "ship_date_seq", self.aliases_sampling)
 
         # one-offs
+        # HI FIX: compare depth as a number, not as text; accept the schema formats (#9, #28)
         def depth(data_model: DataModel) -> List[Violation]:
             violations = []
             for alias_observatory, alias_sampling in zip(self.aliases_observatory, self.aliases_sampling):
                 dfo = data_model[alias_observatory]
                 dfs = data_model[alias_sampling]
                 tot_depth_water_col = dfo.at[0, "tot_depth_water_col"]
+                tot_depth = safe_float(tot_depth_water_col)
                 for index, row in dfs.iterrows():
-                    if not data_model.isna(row["depth"]):
-                        if row["depth"] > tot_depth_water_col:  # TODO absolute value?
-                            violations.append(
-                                Violation(
-                                    diagnosis="illegal depth",
-                                    table=alias_sampling,
-                                    column="depth",
-                                    row=index + 1,
-                                    value=row["depth"],
-                                    extended_diagnosis=f"depth must be less than or equal to tot_depth_water_col ({tot_depth_water_col})",
-                                ),
-                            )
+                    if data_model.isna(row["depth"]):
+                        continue
+                    kind, depth_value = parse_depth(row["depth"])
+                    if kind == "invalid":
+                        violations.append(
+                            Violation(
+                                diagnosis="depth format error",
+                                table=alias_sampling,
+                                column="depth",
+                                row=index + 1,
+                                value=row["depth"],
+                                extended_diagnosis="depth must be a number, a range (float-float), <float or >float",
+                            ),
+                        )
+                        continue
+                    if tot_depth is None or kind == "<":
+                        continue
+                    too_deep = depth_value >= tot_depth if kind == ">" else depth_value > tot_depth
+                    if too_deep:
+                        violations.append(
+                            Violation(
+                                diagnosis="illegal depth",
+                                table=alias_sampling,
+                                column="depth",
+                                row=index + 1,
+                                value=row["depth"],
+                                extended_diagnosis=f"depth must be less than or equal to tot_depth_water_col ({tot_depth_water_col})",
+                            ),
+                        )
             return violations
         
         self.depth = depth
