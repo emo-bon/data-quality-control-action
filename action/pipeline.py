@@ -12,6 +12,16 @@ class Pipeline:
         df_repair = self.dqc[~self.dqc["repair"].isna()]
         for _, row in df_repair.iterrows():
             self.dfs[row["table"]].at[row["row"] - 1, row["column"]] = row["repair"]
+
+        # HI ADDITION: text in a number column that can't be repaired becomes empty, so NA in transformed (#3)
+        number_types = ["XSDFloat", "XSDDouble", "XSDInteger"]
+        df_empty = self.dqc[
+            (self.dqc["diagnosis"] == "datatype mismatch")
+            & self.dqc["data_type"].isin(number_types)
+            & self.dqc["repair"].isna()
+        ]
+        for _, row in df_empty.iterrows():
+            self.dfs[row["table"]].at[row["row"] - 1, row["column"]] = ""
     
     def run(self):
         # read input
