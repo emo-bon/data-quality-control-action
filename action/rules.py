@@ -315,26 +315,30 @@ class CommonRuleArray:
         self.env_local = envo("env_local", aliases=self.aliases_observatory)
         self.env_material = envo("env_material", aliases=self.aliases_sampling)
 
-        def size_frac_low_gt(data_model: DataModel) -> List[Violation]:
+        # HI FIX: check both size_frac columns for > and < (#8)
+        def size_frac_gt_lt(data_model: DataModel) -> List[Violation]:
             violations = []
             for alias_sampling in self.aliases_sampling:
                 df = data_model[alias_sampling]
                 for index, row in df.iterrows():
-                    if not data_model.isna(row["size_frac_low"]):
-                        if ">" in row["size_frac_low"]:
+                    for column in ["size_frac_low", "size_frac_up"]:
+                        value = row[column]
+                        if data_model.isna(value):
+                            continue
+                        if ">" in value or "<" in value:
                             violations.append(
                                 Violation(
                                     diagnosis="illegal character",
                                     table=alias_sampling,
-                                    column="size_frac_low",
+                                    column=column,
                                     row=index + 1,
-                                    value=row["size_frac_low"],
-                                    extended_diagnosis=f"size_frac_low must not contain the greater-than character `>`",
+                                    value=value,
+                                    extended_diagnosis=f"{column} must not contain `>` or `<`",
                                 ),
                             )
             return violations
-        
-        self.size_frac_low_gt = size_frac_low_gt
+
+        self.size_frac_gt_lt = size_frac_gt_lt
 
 
 class SedimentRuleArray:
