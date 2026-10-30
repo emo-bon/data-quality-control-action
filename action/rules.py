@@ -340,6 +340,31 @@ class CommonRuleArray:
 
         self.size_frac_gt_lt = size_frac_gt_lt
 
+        # HI ADDITION: flag size_frac_low greater than size_frac_up; skip NA and non-numbers (#8)
+        def size_frac_low_above_up(data_model: DataModel) -> List[Violation]:
+            violations = []
+            for alias_sampling in self.aliases_sampling:
+                df = data_model[alias_sampling]
+                for index, row in df.iterrows():
+                    low = safe_float(row["size_frac_low"])
+                    up = safe_float(row["size_frac_up"])
+                    if low is None or up is None:
+                        continue
+                    if low > up:
+                        violations.append(
+                            Violation(
+                                diagnosis="illegal size fraction",
+                                table=alias_sampling,
+                                column="size_frac_low",
+                                row=index + 1,
+                                value=row["size_frac_low"],
+                                extended_diagnosis=f"size_frac_low ({row['size_frac_low']}) must not be greater than size_frac_up ({row['size_frac_up']})",
+                            ),
+                        )
+            return violations
+
+        self.size_frac_low_above_up = size_frac_low_above_up
+
 
 class SedimentRuleArray:
     """
