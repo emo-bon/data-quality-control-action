@@ -43,6 +43,7 @@ def read_emobon_csv(path):
         .map(lambda _: _.strip())
         .map(lambda _: "" if _ == "nan" else _)
         .map(lambda _: "" if (_ == "NA") or (_ =="ΝΑ") else _)  # prevent unicode confusion by replacing both greek and latin NA)
+        .map(lambda _: "" if "expected" in _.lower() else _)
     )
     df = df[~(df == "").all(axis=1)]  # drop empty rows
     return df
