@@ -10,6 +10,8 @@ from typing import List
 from py_data_rules.data_model import DataModel
 from py_data_rules.rule import Rule
 from py_data_rules.violation import Violation
+from .data_model import join_list, split_list
+
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +243,8 @@ class CommonRuleArray:
                     if not data_model.isna(edmo):
                         # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                         try:
-                            repair = ";".join([f"{prefix}{int(i.strip())}" for i in edmo.split(";")])  # int conversion to assert the input is a list of integers
+                            # HI FIX: use the list helpers, so a trailing ";" doesn't break the rule and the output ends with ";" (#6, #17)
+                            repair = join_list([f"{prefix}{int(i.strip())}" for i in split_list(edmo)])  # int conversion to assert the input is a list of integers
                             violations.append(
                                 Violation(
                                     diagnosis="organization edmoid error",
@@ -279,13 +282,15 @@ class CommonRuleArray:
                         if not data_model.isna(envo):
                             # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                             try:
-                                accession_numbers = [term.strip().split('[ENVO')[-1][1:-1] for term in envo.split(";")]
+                                # HI FIX: use split_list so spaces and a trailing ";" don't break the rule (#6, #17)
+                                accession_numbers = [term.strip().split('[ENVO')[-1][1:-1] for term in split_list(envo)]
                                 for an in accession_numbers:
                                     try:
                                         int(an)
                                     except:
                                         raise AssertionError
-                                repair = ";".join([f"{prefix}{an}" for an in accession_numbers])
+                                # HI FIX: write the URLs as a list ending with ";" (#6, #17)
+                                repair = join_list([f"{prefix}{an}" for an in accession_numbers])
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
