@@ -10,7 +10,7 @@ from typing import List
 from py_data_rules.data_model import DataModel
 from py_data_rules.rule import Rule
 from py_data_rules.violation import Violation
-from .data_model import join_list, split_list
+from .data_model import EMOBONList, join_list, split_list
 
 
 logger = logging.getLogger(__name__)
@@ -270,6 +270,37 @@ class CommonRuleArray:
             return violations
     
         self.organization_edmoid = organization_edmoid
+
+
+        # HI ADDITION: write every list column as "item;item;"; ENVO and EDMO columns are handled by their own rules (#6, #17)
+        def list_format(data_model: DataModel) -> List[Violation]:
+            skip = ["env_broad_biome", "env_local", "env_material", "organization_edmoid"]
+            violations = []
+            for alias in self.aliases_observatory + self.aliases_sampling + self.aliases_measured:
+                table = data_model[alias]
+                for c in table.schema.columns:
+                    if not isinstance(c.data_type, EMOBONList) or c.label in skip or c.label not in table.columns:
+                        continue
+                    for index, value in table[c.label].items():
+                        # HI ADDITION: skip values with a comma; they are already reported as datatype mismatch
+                        if data_model.isna(value) or "," in value:
+                            continue   
+                        repair = join_list(split_list(value))
+                        if repair and repair != value:
+                            violations.append(
+                                Violation(
+                                    diagnosis="list format",
+                                    table=alias,
+                                    column=c.label,
+                                    row=index + 1,
+                                    value=value,
+                                    extended_diagnosis='list items should be separated by ";" and end with ";"',
+                                    repair=repair,
+                                )
+                            )
+            return violations
+
+        self.list_format = list_format
 
         def envo(column, aliases):
             def fn(data_model: DataModel) -> List[Violation]:
