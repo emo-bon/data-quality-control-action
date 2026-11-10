@@ -1,4 +1,5 @@
 import logging
+import math
 import re
 import requests
 import uritemplate
@@ -11,6 +12,37 @@ from py_data_rules.rule import Rule
 from py_data_rules.violation import Violation
 
 logger = logging.getLogger(__name__)
+
+
+# HI ADDITION: convert a cell to float for numeric comparisons
+def safe_float(value):
+    try:
+        number = float(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
+# HI ADDITION: read a depth cell in one of the schema formats (float, float-float, <float, >float)
+def parse_depth(value):
+    text = str(value).replace(" ", "")
+    if text.startswith((">", "<")):
+        number = safe_float(text[1:])
+        if number is None:
+            return "invalid", None
+        return text[0], number
+    if "-" in text:
+        parts = text.split("-")
+        if len(parts) != 2:
+            return "invalid", None
+        low, high = safe_float(parts[0]), safe_float(parts[1])
+        if low is None or high is None:
+            return "invalid", None
+        return "range", max(low, high)
+    number = safe_float(text)
+    if number is None:
+        return "invalid", None
+    return "number", number
 
 
 class CommonRuleArray:
@@ -32,25 +64,44 @@ class CommonRuleArray:
         self.arr_date_seq_after_ship_date_seq = rf.x_after_y("arr_date_seq", "ship_date_seq", self.aliases_sampling)
 
         # one-offs
+        # HI FIX: compare depth as a number, not as text; accept the schema formats (#9, #28)
         def depth(data_model: DataModel) -> List[Violation]:
             violations = []
             for alias_observatory, alias_sampling in zip(self.aliases_observatory, self.aliases_sampling):
                 dfo = data_model[alias_observatory]
                 dfs = data_model[alias_sampling]
                 tot_depth_water_col = dfo.at[0, "tot_depth_water_col"]
+                tot_depth = safe_float(tot_depth_water_col)
                 for index, row in dfs.iterrows():
-                    if not data_model.isna(row["depth"]):
-                        if row["depth"] > tot_depth_water_col:  # TODO absolute value?
-                            violations.append(
-                                Violation(
-                                    diagnosis="illegal depth",
-                                    table=alias_sampling,
-                                    column="depth",
-                                    row=index + 1,
-                                    value=row["depth"],
-                                    extended_diagnosis=f"depth must be less than or equal to tot_depth_water_col ({tot_depth_water_col})",
-                                ),
-                            )
+                    if data_model.isna(row["depth"]):
+                        continue
+                    kind, depth_value = parse_depth(row["depth"])
+                    if kind == "invalid":
+                        violations.append(
+                            Violation(
+                                diagnosis="depth format error",
+                                table=alias_sampling,
+                                column="depth",
+                                row=index + 1,
+                                value=row["depth"],
+                                extended_diagnosis="depth must be a number, a range (float-float), <float or >float",
+                            ),
+                        )
+                        continue
+                    if tot_depth is None or kind == "<":
+                        continue
+                    too_deep = depth_value >= tot_depth if kind == ">" else depth_value > tot_depth
+                    if too_deep:
+                        violations.append(
+                            Violation(
+                                diagnosis="illegal depth",
+                                table=alias_sampling,
+                                column="depth",
+                                row=index + 1,
+                                value=row["depth"],
+                                extended_diagnosis=f"depth must be less than or equal to tot_depth_water_col ({tot_depth_water_col})",
+                            ),
+                        )
             return violations
         
         self.depth = depth
@@ -264,26 +315,55 @@ class CommonRuleArray:
         self.env_local = envo("env_local", aliases=self.aliases_observatory)
         self.env_material = envo("env_material", aliases=self.aliases_sampling)
 
-        def size_frac_low_gt(data_model: DataModel) -> List[Violation]:
+        # HI FIX: check both size_frac columns for > and < (#8)
+        def size_frac_gt_lt(data_model: DataModel) -> List[Violation]:
             violations = []
             for alias_sampling in self.aliases_sampling:
                 df = data_model[alias_sampling]
                 for index, row in df.iterrows():
-                    if not data_model.isna(row["size_frac_low"]):
-                        if ">" in row["size_frac_low"]:
+                    for column in ["size_frac_low", "size_frac_up"]:
+                        value = row[column]
+                        if data_model.isna(value):
+                            continue
+                        if ">" in value or "<" in value:
                             violations.append(
                                 Violation(
                                     diagnosis="illegal character",
                                     table=alias_sampling,
-                                    column="size_frac_low",
+                                    column=column,
                                     row=index + 1,
-                                    value=row["size_frac_low"],
-                                    extended_diagnosis=f"size_frac_low must not contain the greater-than character `>`",
+                                    value=value,
+                                    extended_diagnosis=f"{column} must not contain `>` or `<`",
                                 ),
                             )
             return violations
-        
-        self.size_frac_low_gt = size_frac_low_gt
+
+        self.size_frac_gt_lt = size_frac_gt_lt
+
+        # HI ADDITION: flag size_frac_low greater than size_frac_up; skip NA and non-numbers (#8)
+        def size_frac_low_above_up(data_model: DataModel) -> List[Violation]:
+            violations = []
+            for alias_sampling in self.aliases_sampling:
+                df = data_model[alias_sampling]
+                for index, row in df.iterrows():
+                    low = safe_float(row["size_frac_low"])
+                    up = safe_float(row["size_frac_up"])
+                    if low is None or up is None:
+                        continue
+                    if low > up:
+                        violations.append(
+                            Violation(
+                                diagnosis="illegal size fraction",
+                                table=alias_sampling,
+                                column="size_frac_low",
+                                row=index + 1,
+                                value=row["size_frac_low"],
+                                extended_diagnosis=f"size_frac_low ({row['size_frac_low']}) must not be greater than size_frac_up ({row['size_frac_up']})",
+                            ),
+                        )
+            return violations
+
+        self.size_frac_low_above_up = size_frac_low_above_up
 
 
 class SedimentRuleArray:
