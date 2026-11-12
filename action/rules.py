@@ -47,6 +47,38 @@ def parse_depth(value):
     return "number", number
 
 
+# NCBI E-utilities API; see https://www.ncbi.nlm.nih.gov/books/NBK25501/
+NCBI_ESUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+
+# HI ADDITION: a helper-get the scientific name of a tax_id from the NCBI E-utilities API (#34)
+def ncbi_scientific_name(tax_id):
+    """Look up the scientific name of a tax_id in the NCBI Taxonomy.
+
+    Uses the E-utilities API instead of the taxonomy web page, so changes to
+    the website don't break the lookup.
+
+    Returns a tuple (name, ok):
+    - ("marine sediment metagenome", True): found
+    - (None, True): NCBI answered, but the tax_id is unknown
+    - (None, False): NCBI could not be reached; the error is written to the logfile
+    """
+    try:
+        r = requests.get(
+            NCBI_ESUMMARY,
+            params={"db": "taxonomy", "id": tax_id, "retmode": "json", "tool": "emobon-dqc"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        record = r.json()["result"].get(str(tax_id), {})
+    except (requests.RequestException, ValueError, KeyError) as e:
+        # network problems are not data errors, so they are logged, not reported to the observatory
+        logger.error(f"NCBI lookup failed for tax_id {tax_id}: {e}")
+        return None, False
+    # an unknown tax_id has an "error" field instead of "scientificname"
+    return record.get("scientificname"), True
+
+
 class CommonRuleArray:
     """
     rules in common to all habitats
