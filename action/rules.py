@@ -4,7 +4,6 @@ import re
 import requests
 import uritemplate
 import py_data_rules.rule_factory as rf
-from bs4 import BeautifulSoup
 from inspect import getmembers, isfunction
 from typing import List
 from py_data_rules.data_model import DataModel
@@ -186,16 +185,24 @@ class CommonRuleArray:
                 for index, row in df.iterrows():
                     if not data_model.isna(row["tax_id"]) and not data_model.isna(row["scientific_name"]):
                         tax_id = row["tax_id"]
-                        if not tax_id in tax_id2scientific_name.keys():
-                            uri = uritemplate.expand(
-                                "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={tax_id}",
-                                {"tax_id": tax_id}
+                        # HI FIX: ask the NCBI API instead of reading the taxonomy web page; a failed lookup only skips that tax_id (#34)
+                        if tax_id not in tax_id2scientific_name:
+                            tax_id2scientific_name[tax_id] = ncbi_scientific_name(tax_id)
+                        scientific_name, ok = tax_id2scientific_name[tax_id]
+                        if not ok:
+                            continue  # NCBI could not be reached; already in the logfile
+                        if scientific_name is None:
+                            violations.append(
+                                Violation(
+                                    diagnosis="tax_id error",
+                                    table=alias,
+                                    column="tax_id",
+                                    row=index + 1,
+                                    value=tax_id,
+                                    extended_diagnosis=f"tax_id {tax_id} was not found in the NCBI Taxonomy",
+                                )
                             )
-                            r = requests.get(uri)
-                            soup = BeautifulSoup(r.text, "html.parser")
-                            scientific_name = soup.title.string.split("(")[1][:-1]
-                            tax_id2scientific_name.update({tax_id: scientific_name})  # TODO handle the case where the scientific name could not be retrieved
-                        if tax_id2scientific_name[tax_id] != row["scientific_name"]:
+                        elif scientific_name != row["scientific_name"]:
                             violations.append(
                                 Violation(
                                     diagnosis="scientific name error",
@@ -203,13 +210,17 @@ class CommonRuleArray:
                                     column="scientific_name",
                                     row=index + 1,
                                     value=row["scientific_name"],
-                                    extended_diagnosis=f"scientific_name should be {tax_id2scientific_name[tax_id]}",
+                                    extended_diagnosis=f"scientific_name should be {scientific_name}",
                                 )
                             )
+
                     elif data_model.isna(row["tax_id"]) and data_model.isna(row["scientific_name"]):
                         pass
                     else:
-                        raise AssertionError
+                        # HI FIX: only one of tax_id / scientific_name is filled; the empty one is already reported
+                        # as missing value (both are mandatory), so skip the row instead of stopping the whole rule (#34)
+                        pass
+                    
             return violations
         
         self.tax_id_versus_scientific_name = tax_id_versus_scientific_name
