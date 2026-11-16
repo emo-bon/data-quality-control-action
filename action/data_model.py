@@ -36,6 +36,16 @@ class EMOBONList(DataType):
             return True
 
 
+# HI ADDITION: split a list cell on ";" into clean items (#6, #17)
+def split_list(value):
+    return [item.strip() for item in str(value).split(";") if item.strip()]
+
+
+# HI ADDITION: write list items back as "item;item;" (#6, #17)
+def join_list(items):
+    return "".join(f"{item};" for item in items)
+
+
 def read_emobon_csv(path):
     df = (
         pd.read_csv(path, dtype=object, keep_default_na=False, na_values=[""])

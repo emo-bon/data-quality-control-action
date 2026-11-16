@@ -10,6 +10,8 @@ from typing import List
 from py_data_rules.data_model import DataModel
 from py_data_rules.rule import Rule
 from py_data_rules.violation import Violation
+from .data_model import EMOBONList, join_list, split_list
+
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +243,8 @@ class CommonRuleArray:
                     if not data_model.isna(edmo):
                         # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                         try:
-                            repair = ";".join([f"{prefix}{int(i.strip())}" for i in edmo.split(";")])  # int conversion to assert the input is a list of integers
+                            # HI FIX: use the list helpers, so a trailing ";" doesn't break the rule and the output ends with ";" (#6, #17)
+                            repair = join_list([f"{prefix}{int(i.strip())}" for i in split_list(edmo)])  # int conversion to assert the input is a list of integers
                             violations.append(
                                 Violation(
                                     diagnosis="organization edmoid error",
@@ -268,6 +271,37 @@ class CommonRuleArray:
     
         self.organization_edmoid = organization_edmoid
 
+
+        # HI ADDITION: write every list column as "item;item;"; ENVO and EDMO columns are handled by their own rules (#6, #17)
+        def list_format(data_model: DataModel) -> List[Violation]:
+            skip = ["env_broad_biome", "env_local", "env_material", "organization_edmoid"]
+            violations = []
+            for alias in self.aliases_observatory + self.aliases_sampling + self.aliases_measured:
+                table = data_model[alias]
+                for c in table.schema.columns:
+                    if not isinstance(c.data_type, EMOBONList) or c.label in skip or c.label not in table.columns:
+                        continue
+                    for index, value in table[c.label].items():
+                        # HI ADDITION: skip values with a comma; they are already reported as datatype mismatch
+                        if data_model.isna(value) or "," in value:
+                            continue   
+                        repair = join_list(split_list(value))
+                        if repair and repair != value:
+                            violations.append(
+                                Violation(
+                                    diagnosis="list format",
+                                    table=alias,
+                                    column=c.label,
+                                    row=index + 1,
+                                    value=value,
+                                    extended_diagnosis='list items should be separated by ";" and end with ";"',
+                                    repair=repair,
+                                )
+                            )
+            return violations
+
+        self.list_format = list_format
+
         def envo(column, aliases):
             def fn(data_model: DataModel) -> List[Violation]:
                 prefix = "http://purl.obolibrary.org/obo/ENVO_"
@@ -279,13 +313,15 @@ class CommonRuleArray:
                         if not data_model.isna(envo):
                             # TODO handle the case where the input is already repaired (i.e. a list of URIs)
                             try:
-                                accession_numbers = [term.strip().split('[ENVO')[-1][1:-1] for term in envo.split(";")]
+                                # HI FIX: use split_list so spaces and a trailing ";" don't break the rule (#6, #17)
+                                accession_numbers = [term.strip().split('[ENVO')[-1][1:-1] for term in split_list(envo)]
                                 for an in accession_numbers:
                                     try:
                                         int(an)
                                     except:
                                         raise AssertionError
-                                repair = ";".join([f"{prefix}{an}" for an in accession_numbers])
+                                # HI FIX: write the URLs as a list ending with ";" (#6, #17)
+                                repair = join_list([f"{prefix}{an}" for an in accession_numbers])
                                 violations.append(
                                     Violation(
                                         diagnosis="envo term error",
