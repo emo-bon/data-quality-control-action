@@ -4,7 +4,6 @@ import re
 import requests
 import uritemplate
 import py_data_rules.rule_factory as rf
-from bs4 import BeautifulSoup
 from inspect import getmembers, isfunction
 from typing import List
 from py_data_rules.data_model import DataModel
@@ -45,6 +44,38 @@ def parse_depth(value):
     if number is None:
         return "invalid", None
     return "number", number
+
+
+# NCBI E-utilities API; see https://www.ncbi.nlm.nih.gov/books/NBK25501/
+NCBI_ESUMMARY = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+
+# HI ADDITION: a helper-get the scientific name of a tax_id from the NCBI E-utilities API (#34)
+def ncbi_scientific_name(tax_id):
+    """Look up the scientific name of a tax_id in the NCBI Taxonomy.
+
+    Uses the E-utilities API instead of the taxonomy web page, so changes to
+    the website don't break the lookup.
+
+    Returns a tuple (name, ok):
+    - ("marine sediment metagenome", True): found
+    - (None, True): NCBI answered, but the tax_id is unknown
+    - (None, False): NCBI could not be reached; the error is written to the logfile
+    """
+    try:
+        r = requests.get(
+            NCBI_ESUMMARY,
+            params={"db": "taxonomy", "id": tax_id, "retmode": "json", "tool": "emobon-dqc"},
+            timeout=30,
+        )
+        r.raise_for_status()
+        record = r.json()["result"].get(str(tax_id), {})
+    except (requests.RequestException, ValueError, KeyError) as e:
+        # network problems are not data errors, so they are logged, not reported to the observatory
+        logger.error(f"NCBI lookup failed for tax_id {tax_id}: {e}")
+        return None, False
+    # an unknown tax_id has an "error" field instead of "scientificname"
+    return record.get("scientificname"), True
 
 
 class CommonRuleArray:
@@ -154,16 +185,24 @@ class CommonRuleArray:
                 for index, row in df.iterrows():
                     if not data_model.isna(row["tax_id"]) and not data_model.isna(row["scientific_name"]):
                         tax_id = row["tax_id"]
-                        if not tax_id in tax_id2scientific_name.keys():
-                            uri = uritemplate.expand(
-                                "https://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?id={tax_id}",
-                                {"tax_id": tax_id}
+                        # HI FIX: ask the NCBI API instead of reading the taxonomy web page; a failed lookup only skips that tax_id (#34)
+                        if tax_id not in tax_id2scientific_name:
+                            tax_id2scientific_name[tax_id] = ncbi_scientific_name(tax_id)
+                        scientific_name, ok = tax_id2scientific_name[tax_id]
+                        if not ok:
+                            continue  # NCBI could not be reached; already in the logfile
+                        if scientific_name is None:
+                            violations.append(
+                                Violation(
+                                    diagnosis="tax_id error",
+                                    table=alias,
+                                    column="tax_id",
+                                    row=index + 1,
+                                    value=tax_id,
+                                    extended_diagnosis=f"tax_id {tax_id} was not found in the NCBI Taxonomy",
+                                )
                             )
-                            r = requests.get(uri)
-                            soup = BeautifulSoup(r.text, "html.parser")
-                            scientific_name = soup.title.string.split("(")[1][:-1]
-                            tax_id2scientific_name.update({tax_id: scientific_name})  # TODO handle the case where the scientific name could not be retrieved
-                        if tax_id2scientific_name[tax_id] != row["scientific_name"]:
+                        elif scientific_name != row["scientific_name"]:
                             violations.append(
                                 Violation(
                                     diagnosis="scientific name error",
@@ -171,13 +210,17 @@ class CommonRuleArray:
                                     column="scientific_name",
                                     row=index + 1,
                                     value=row["scientific_name"],
-                                    extended_diagnosis=f"scientific_name should be {tax_id2scientific_name[tax_id]}",
+                                    extended_diagnosis=f"scientific_name should be {scientific_name}",
                                 )
                             )
+
                     elif data_model.isna(row["tax_id"]) and data_model.isna(row["scientific_name"]):
                         pass
                     else:
-                        raise AssertionError
+                        # HI FIX: only one of tax_id / scientific_name is filled; the empty one is already reported
+                        # as missing value (both are mandatory), so skip the row instead of stopping the whole rule (#34)
+                        pass
+                    
             return violations
         
         self.tax_id_versus_scientific_name = tax_id_versus_scientific_name
